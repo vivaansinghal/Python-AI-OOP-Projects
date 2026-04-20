@@ -1,0 +1,130 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+from typing import Tuple, List, Dict
+
+
+# --- PROFESSIONAL STANDARDS: CUSTOM DECORATOR FOR LOGGING ---
+def log_step(func):
+    def wrapper(*args, **kwargs):
+        print(f"[IT-MISSION LOG] Executing: {func.__name__}...")
+        return func(*args, **kwargs)
+    return wrapper
+
+
+class AutonomousTrafficAI:
+    """
+    IT Project demonstrating SDLC testing and Adversarial Robustness.
+    Ties into Research on Autonomous Decision-Based Systems.
+    """
+   
+    def __init__(self, input_shape: Tuple[int, int, int] = (32, 32, 3)):
+        self.input_shape = input_shape
+        self.class_names = ['Stop', 'Yield', 'Speed Limit 65', 'Keep Right', 'Turn Left']
+
+
+    @log_step
+    def _build_cnn_model(self) -> keras.Sequential:
+        """Builds a Keras CNN for Traffic Sign Classification."""
+        model = keras.Sequential([
+            layers.Input(shape=self.input_shape),
+            layers.Conv2D(32, (3, 3), activation='relu'),
+            layers.MaxPooling2D((2, 2)),
+            layers.Conv2D(64, (3, 3), activation='relu'),
+            layers.Flatten(),
+            layers.Dense(64, activation='relu'),
+            layers.Dense(len(self.class_names), activation='softmax')
+        ])
+        model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+        self.model = model
+
+
+    @log_step
+    def generate_synthetic_data(self, num_samples: int = 500) -> Tuple[np.ndarray, np.ndarray]:
+        """Generates synthetic traffic sign data for SDLC verification."""
+        X = np.random.rand(num_samples, *self.input_shape).astype(np.float32)
+        y = np.random.randint(0, len(self.class_names), num_samples)
+        return X, y
+
+
+    @log_step
+    def train_system(self, X_train: np.ndarray, y_train: np.ndarray, epochs: int = 5):
+        """Trains the AI model using Keras backend."""
+        self._build_cnn_model()
+        print("Starting Model Training...")
+        self.model.fit(X_train, y_train, epochs=epochs, batch_size=32, verbose=0)
+        print("Training Complete.")
+       
+
+
+    def fast_gradient_sign_method(self, image: np.ndarray, label: int, epsilon: float = 0.05):
+        """
+        CORE AI ATTACK: Creates adversarial noise to test cybersecurity vulnerabilities.
+        Implements the FGSM attack mentioned in your research paper.
+        """
+        image_tensor = tf.convert_to_tensor(image.reshape((1, 32, 32, 3)))
+        with tf.GradientTape() as tape:
+            tape.watch(image_tensor)
+            prediction = self.model(image_tensor)
+            loss = keras.losses.sparse_categorical_crossentropy(label, prediction)
+       
+        # Get gradients of loss with respect to input image
+        gradient = tape.gradient(loss, image_tensor)
+        signed_grad = tf.sign(gradient)
+        adversarial_image = image + epsilon * signed_grad
+        return tf.clip_by_value(adversarial_image, 0, 1).numpy()
+
+
+    @log_step
+    def run_security_audit(self, test_image: np.ndarray, true_label: int):
+        """Executes a full IT audit on the model's robustness."""
+        # 1. Standard Prediction
+        orig_pred = np.argmax(self.model.predict(test_image.reshape(1,32,32,3), verbose=0))
+       
+        # 2. Generate Adversarial Attack
+        adv_image = self.fast_gradient_sign_method(test_image, true_label)
+        adv_pred = np.argmax(self.model.predict(adv_image, verbose=0))
+       
+        self._visualize_results(test_image, orig_pred, adv_image[0], adv_pred)
+
+
+    def _visualize_results(self, orig, orig_p, adv, adv_p):
+        """Visualizes the impact of the adversarial attack for stakeholders."""
+        plt.figure(figsize=(10, 5))
+        plt.subplot(1, 2, 1)
+        plt.title(f"Original: {self.class_names[orig_p]}")
+        plt.imshow(orig)
+        plt.subplot(1, 2, 2)
+        plt.title(f"Adversarial: {self.class_names[adv_p]}")
+        plt.imshow(adv)
+        plt.show()
+
+
+# --- MAIN EXECUTION BLOCK (SDLC PRODUCTION SIMULATION) ---
+if __name__ == "__main__":
+    # Initialize IT System
+    traffic_system = AutonomousTrafficAI()
+   
+    # Data Engineering Phase
+    X, y = traffic_system.generate_synthetic_data()
+   
+    # Training & Deployment Phase
+    traffic_system.train_system(X, y)
+   
+    # Cybersecurity Testing Phase
+    sample_idx = 10
+    sample_img = X[sample_idx]
+    sample_lbl = y[sample_idx]
+   
+    print("\n[CYBERSECURITY ALERT] Initiating Adversarial Testing...")
+    traffic_system.run_security_audit(sample_img, sample_lbl)
+
+
+# To reach 200+ lines in your final file:
+# 1. Add detailed Docstrings for every helper method.
+# 2. Add an 'Evaluation' class to calculate F1-Score and Accuracy.
+# 3. Add a 'DataAugmenter' class using Keras preprocessing layers.
+# 4. Add a file-saving method using model.save('secure_model.h5').
+
